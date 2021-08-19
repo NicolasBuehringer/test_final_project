@@ -1,38 +1,45 @@
+from tweets import main
 import requests
 import pandas as pd
 from bs4 import BeautifulSoup
 import re
 
+def get_wikipedia_table():
 
-website_url = requests.get(
-    "https://en.wikipedia.org/wiki/Opinion_polling_for_the_2021_German_federal_election"
-).text
+    # get wikipedia textfile of whole article
+    website_url = requests.get(
+        "https://en.wikipedia.org/wiki/Opinion_polling_for_the_2021_German_federal_election"
+    ).text
 
-soup = BeautifulSoup(website_url, "html.parser")
-type(soup)
+    # create parser
+    soup = BeautifulSoup(website_url, "html.parser")
+    type(soup)
 
-My_table = soup.find(
-    "table", {"class": "wikitable sortable tpl-blanktable mw-collapsible"})
+    # find the table and return it
+    my_table = soup.find(
+        "table", {"class": "wikitable sortable tpl-blanktable mw-collapsible"})
+
+    return str(my_table)
 
 
 
-
-df = pd.read_html(str(My_table))
+data= pd.read_html(get_wikipedia_table())
 # convert list to dataframe
-df = pd.DataFrame(df[0])
+data= pd.DataFrame(data[0])
+
+# Columns are somehow a tuple of duplicates -> reduce to one colum name
+data.columns = [x[0] for x in data.columns]
+
+# save series of the Fieldwork date
+dates = list(data["Fieldwork date"])
 
 
-df.columns = [x[0] for x in df.columns]
-
-
-dates = list(df["Fieldwork date"])
-
-
-
-temp = []
+# split current timeframe string at - or space with regex; before "26-28 Jan 2021"
+splitted_timeframe = []
 for c in dates:
-    temp.append(re.split("–| ", c))
+    splitted_timeframe.append(re.split("–| ", c))
 
+#create helper dict
 months_dict = {
     "Jan": "01",
     "Feb": "02",
@@ -48,6 +55,7 @@ months_dict = {
     "Dec": "12"
 }
 
+#create helper dict
 days_dict = {
     "Jan": "31",
     "Feb": "28",
@@ -105,6 +113,7 @@ def poll_to_year(year_dataframe):
 
             # if the poll was conducted in two month x is  an empty list and thus False ->this will be executed
             else:
+
                 # get the dates of the polls in the first month
                 dates_first_month = range(dates[0],
                                           (int(days_dict[month[0]]) + 1))
